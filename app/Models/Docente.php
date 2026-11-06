@@ -15,7 +15,7 @@ class Docente extends Model
         return $this->belongsToMany(Grupo::class);
     }
 
-    public function estudiante()
+    public function estudiantes()
     {
         return $this->hasMany(Estudiante::class);
     }
