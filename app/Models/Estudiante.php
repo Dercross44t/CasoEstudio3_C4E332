@@ -12,7 +12,7 @@ class Estudiante extends Model
 
     public function consejero()
         {
-        return $this->belongsTo(Docente::class);
+        return $this->belongsTo(Docente::class, 'docente_id');
     }
 
     public function matricula()

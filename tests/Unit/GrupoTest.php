@@ -18,28 +18,30 @@ class GrupoTest extends TestCase
         $curso->nombreCurso = 'Análisis y Diseño de Sistemas';
         $curso->creditos = 4;
 
-        // Crear los docentes
+        // Crear docente 1001
         $docente1 = new Docente();
-        $docente1->codeEmpleado = 101;
-        $docente1->nombreEmpleado = 'Carlos';
-        $docente1->apellidosEmpleado = 'Mora';
+        $docente1->codeEmpleado = 1001;
+        $docente1->nombreEmpleado = 'Ana';
+        $docente1->apellidosEmpleado = 'Mora Vargas';
 
+        // Crear docente 1002
         $docente2 = new Docente();
-        $docente2->codeEmpleado = 102;
-        $docente2->nombreEmpleado = 'María';
-        $docente2->apellidosEmpleado = 'Vargas';
+        $docente2->codeEmpleado = 1002;
+        $docente2->nombreEmpleado = 'Luis';
+        $docente2->apellidosEmpleado = 'Rojas Solano';
 
         // Crear el grupo
         $grupo = new Grupo();
         $grupo->numeroCiclo = 2;
         $grupo->ano = 2026;
         $grupo->numeroGrupo = 1;
-        $grupo->abierto = true;
+        $grupo->abierto = false;
 
-        // Asociar curso y docentes
+        // Asociar curso y docentes en memoria
         $grupo->setRelation('curso', $curso);
+
         $grupo->setRelation(
-            'docente',
+            'docentes',
             collect([$docente1, $docente2])
         );
 
@@ -52,53 +54,69 @@ class GrupoTest extends TestCase
             $estudiante->nombre = 'Estudiante ' . $i;
             $estudiante->apellidos = 'Apellido ' . $i;
 
-            // Asignar profesor consejero
+            // Asignar consejero
             $estudiante->setRelation('consejero', $docente1);
 
-            // Crear matrícula con su nota
+            // Crear matrícula
             $matricula = new EstudianteMatriculado();
             $matricula->nota = 85.0;
 
             $matricula->setRelation('estudiante', $estudiante);
+            $matricula->setRelation('grupo', $grupo);
 
             $matriculas->push($matricula);
         }
 
         $grupo->setRelation(
-            'estudiantesMatriculado',
+            'estudiantesMatriculados',
             $matriculas
         );
 
-        // Verificar información del grupo
+        // Verificar atributos del grupo
         $this->assertInstanceOf(Grupo::class, $grupo);
         $this->assertEquals(2, $grupo->numeroCiclo);
         $this->assertEquals(2026, $grupo->ano);
         $this->assertEquals(1, $grupo->numeroGrupo);
-        $this->assertTrue($grupo->abierto);
+        $this->assertFalse($grupo->abierto);
 
-        // Verificar el curso
+        // Verificar curso
         $this->assertEquals('IF6100', $grupo->curso->sigla);
+
         $this->assertEquals(
             'Análisis y Diseño de Sistemas',
             $grupo->curso->nombreCurso
         );
 
-        // Verificar los dos docentes
-        $this->assertCount(2, $grupo->docente);
+        $this->assertEquals(4, $grupo->curso->creditos);
 
-        // Verificar los 15 estudiantes
-        $this->assertCount(
-            15,
-            $grupo->estudiantesMatriculado
+        // Verificar docentes
+        $this->assertCount(2, $grupo->docentes);
+
+        $this->assertEquals(
+            1001,
+            $grupo->docentes->first()->codeEmpleado
         );
 
-        // Verificar nota y profesor consejero
-        foreach ($grupo->estudiantesMatriculado as $matricula) {
+        $this->assertEquals(
+            1002,
+            $grupo->docentes->last()->codeEmpleado
+        );
+
+        // Verificar estudiantes
+        $this->assertCount(
+            15,
+            $grupo->estudiantesMatriculados
+        );
+
+        // Verificar notas y consejero
+        foreach ($grupo->estudiantesMatriculados as $matricula) {
             $this->assertEquals(85.0, $matricula->nota);
+
             $this->assertInstanceOf(
                 Estudiante::class,
                 $matricula->estudiante
             );
+
             $this->assertSame(
                 $docente1,
                 $matricula->estudiante->consejero

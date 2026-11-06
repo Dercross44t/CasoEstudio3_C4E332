@@ -10,7 +10,7 @@ class Curso extends Model
     /** @use HasFactory<\Database\Factories\CursoFactory> */
     use HasFactory;
 
-    public function grupo()
+    public function grupos()
     {
         return $this->hasMany(Grupo::class);
     }
