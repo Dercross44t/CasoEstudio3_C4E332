@@ -1,4 +1,3 @@
-
 <?php
 
 use App\Models\Curso;
@@ -11,7 +10,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
 
-test('Un grupo con 15 estudiantes y un docente se abre', function () {
+test('Un grupo con 14 estudiantes no puede abrirse', function () {
 
     // Precondición: Curso registrado
     $curso = new Curso();
@@ -31,16 +30,16 @@ test('Un grupo con 15 estudiantes y un docente se abre', function () {
 
     // Docente 1001
     $docente = new Docente();
-    $docente->codeEmpleado = 1001;
+    $docente->codEmpleado = 1001;
     $docente->nombreEmpleado = 'Ana';
     $docente->apellidosEmpleado = 'Mora Vargas';
     $docente->save();
 
     $grupo->asignarDocente($docente);
 
-    // Generar 15 estudiantes con factory
+    // Generar 14 estudiantes con factory
     $estudiantes = Estudiante::factory()
-    ->count(15)
+    ->count(14)
     ->sequence(fn ($sequence) => [
         'carne' => 'C' . str_pad($sequence->index + 1, 5, '0', STR_PAD_LEFT),
         'nombre' => 'Estudiante',
@@ -59,24 +58,29 @@ test('Un grupo con 15 estudiantes y un docente se abre', function () {
     }
 
     // Consultar si puede abrirse
-    expect($grupo->puedeAbrirse())->toBeTrue();
+    expect($grupo->puedeAbrirse())->toBeFalse();
 
-    // Abrir el grupo
-    $grupo->abrir();
+    // Intentar abrir el grupo
+    $excepcion = null;
 
-    // Recargar desde la base de datos
-    $grupo->refresh();
+    try {
+        $grupo->abrir();
+    } catch (\DomainException $e) {
+        $excepcion = $e;
+    }
 
-    // Verificaciones
-    expect($grupo->abierto)->toBeTrue();
-
-    expect($grupo->estudiantesMatriculados()->count())->toBe(15);
-
-    expect($grupo->docentes()->count())->toBe(1);
+    // Verificar excepción
+    expect($excepcion)->toBeInstanceOf(\DomainException::class);
 
     // Poscondición
+    $grupo->refresh();
+
+    expect($grupo->abierto)->toBeFalse();
+
     $this->assertDatabaseHas('grupos', [
         'id' => $grupo->id,
-        'abierto' => true
+        'abierto' => false
     ]);
+
+    expect($grupo->estudiantesMatriculados()->count())->toBe(14);
 });

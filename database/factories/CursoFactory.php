@@ -17,8 +17,10 @@ class CursoFactory extends Factory
      */
     public function definition(): array
     {
-        return [
-            //
-        ];
+    return [
+        'sigla' => fake()->unique()->bothify('IF####'),
+        'nombreCurso' => fake()->words(4, true),
+        'creditos' => fake()->numberBetween(1, 4),
+    ];
     }
 }

@@ -4,13 +4,15 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class Curso extends Model   
+class Curso extends Model
 {
-    /** @use HasFactory<\Database\Factories\CursoFactory> */
     use HasFactory;
 
-    public function grupos()
+    protected $guarded = [];
+
+    public function grupos(): HasMany
     {
         return $this->hasMany(Grupo::class);
     }

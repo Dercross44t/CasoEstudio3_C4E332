@@ -10,15 +10,13 @@ use Illuminate\Database\Eloquent\Factories\Factory;
  */
 class DocenteFactory extends Factory
 {
-    /**
-     * Define the model's default state.
-     *
-     * @return array<string, mixed>
-     */
     public function definition(): array
     {
         return [
-            //
+            'codEmpleado' => fake()->unique()->numberBetween(1000, 999999),
+            'nombreEmpleado' => fake()->firstName(),
+            'apellidosEmpleado' => fake()->lastName()
+                . ' ' . fake()->lastName(),
         ];
     }
 }

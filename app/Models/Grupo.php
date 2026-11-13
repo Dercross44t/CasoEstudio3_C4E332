@@ -2,61 +2,128 @@
 
 namespace App\Models;
 
+use DomainException;
+use InvalidArgumentException;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Grupo extends Model
 {
-    /** @use HasFactory<\Database\Factories\GrupoFactory> */
     use HasFactory;
+
+    protected $guarded = [];
 
     protected $casts = [
         'abierto' => 'boolean',
     ];
-    public function curso()
+
+    public function curso(): BelongsTo
     {
         return $this->belongsTo(Curso::class);
     }
 
-    public function docentes()
+    public function docentes(): BelongsToMany
     {
-        return $this->belongsToMany(Docente::class);
+        return $this->belongsToMany(
+            Docente::class,
+            'docente_grupo',
+            'grupo_id',
+            'docente_id'
+        );
     }
 
-     public function estudiantesMatriculados()
+    public function estudiantes(): BelongsToMany
     {
-        return $this->hasMany(EstudianteMatriculado::class);
+        return $this->belongsToMany(
+            Estudiante::class,
+            'estudiantes_matriculados',
+            'grupo_id',
+            'estudiante_id'
+        )
+        ->using(EstudianteMatriculado::class)
+        ->withPivot('nota')
+        ->withTimestamps();
     }
 
-    
-public function asignarDocente(Docente $docente)
-{
-    if ($this->docentes()->whereKey($docente->id)->exists()) {
-        throw new \DomainException('El docente ya está asignado al grupo.');
+    public function estudiantesMatriculados(): HasMany
+    {
+        return $this->hasMany(
+            EstudianteMatriculado::class,
+            'grupo_id'
+        );
     }
 
-    if ($this->docentes()->count() >= 2) {
-        throw new \DomainException('El grupo no puede tener más de dos docentes.');
+    public function asignarDocente(Docente $docente): void
+    {
+        if (
+            $this->docentes()
+                ->whereKey($docente->id)
+                ->exists()
+        ) {
+            throw new DomainException(
+                'El docente ya está asignado al grupo.'
+            );
+        }
+
+        if ($this->docentes()->count() >= 2) {
+            throw new DomainException(
+                'El grupo no puede tener más de dos docentes.'
+            );
+        }
+
+        $this->docentes()->attach($docente->id);
     }
 
-    $this->docentes()->attach($docente->id);
-}
+    public function puedeAbrirse(): bool
+    {
+        $cantidadDocentes = $this->docentes()->count();
 
-public function puedeAbrirse(): bool
-{
-    return $this->docentes()->count() >= 1
-        && $this->docentes()->count() <= 2
-        && $this->estudiantesMatriculados()->count() >= 15;
-}
+        $cantidadEstudiantes =
+            $this->estudiantes()->count();
 
-public function abrir()
-{
-    if (!$this->puedeAbrirse()) {
-        throw new \DomainException('El grupo no cumple los requisitos para abrirse.');
+        return $cantidadDocentes >= 1
+            && $cantidadDocentes <= 2
+            && $cantidadEstudiantes >= 15;
     }
 
-    $this->abierto = true;
-    $this->save();
-}
+    public function abrir(): void
+    {
+        if (!$this->puedeAbrirse()) {
+            throw new DomainException(
+                'El grupo no cumple los requisitos para abrirse.'
+            );
+        }
 
+        $this->abierto = true;
+        $this->save();
+    }
+
+    public function registrarNota(
+        Estudiante $estudiante,
+        float $nota
+    ): void {
+        if (!is_finite($nota) || $nota < 0 || $nota > 10) {
+            throw new InvalidArgumentException(
+                'La nota debe estar entre 0 y 10.'
+            );
+        }
+
+        if (
+            !$this->estudiantes()
+                ->whereKey($estudiante->id)
+                ->exists()
+        ) {
+            throw new DomainException(
+                'El estudiante no está matriculado en el grupo.'
+            );
+        }
+
+        $this->estudiantes()->updateExistingPivot(
+            $estudiante->id,
+            ['nota' => $nota]
+        );
+    }
 }

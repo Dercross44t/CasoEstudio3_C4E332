@@ -1,4 +1,3 @@
-
 <?php
 
 use App\Models\Curso;
@@ -9,7 +8,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
 
-test('Un grupo acepta dos docentes', function () {
+test('Un grupo rechaza un tercer docente', function () {
 
     // Precondición: Curso y grupo 01 registrados
     $curso = new Curso();
@@ -26,39 +25,49 @@ test('Un grupo acepta dos docentes', function () {
     $grupo->curso()->associate($curso);
     $grupo->save();
 
-    // Docente 1001
+    // Registrar los tres docentes
     $docente1001 = new Docente();
-    $docente1001->codeEmpleado = 1001;
+    $docente1001->codEmpleado = 1001;
     $docente1001->nombreEmpleado = 'Ana';
     $docente1001->apellidosEmpleado = 'Mora Vargas';
     $docente1001->save();
 
-    // Docente 1002
     $docente1002 = new Docente();
-    $docente1002->codeEmpleado = 1002;
+    $docente1002->codEmpleado = 1002;
     $docente1002->nombreEmpleado = 'Luis';
     $docente1002->apellidosEmpleado = 'Rojas Solano';
     $docente1002->save();
 
-    // Asignar docentes al grupo
+    $docente1003 = new Docente();
+    $docente1003->codEmpleado = 1003;
+    $docente1003->nombreEmpleado = 'Carla';
+    $docente1003->apellidosEmpleado = 'Jiménez Araya';
+    $docente1003->save();
+
+    // Asignar los primeros dos docentes
     $grupo->asignarDocente($docente1001);
     $grupo->asignarDocente($docente1002);
 
-    // Leer los docentes asociados
-    $docentes = $grupo->docentes;
+    // Intentar asignar un tercer docente
+    $excepcion = null;
 
-    // Verificaciones
-    expect($docentes)->toHaveCount(2);
+    try {
+        $grupo->asignarDocente($docente1003);
+    } catch (\DomainException $e) {
+        $excepcion = $e;
+    }
+
+    // Verificar excepción
+    expect($excepcion)->toBeInstanceOf(\DomainException::class);
+
+    // Poscondiciones
+    expect($grupo->docentes()->count())->toBe(2);
 
     expect(
-        $docentes->pluck('codeEmpleado')->sort()->values()->all()
-    )->toBe([1001, 1002]);
+        $grupo->docentes()
+              ->where('docentes.id', $docente1003->id)
+              ->exists()
+    )->toBeFalse();
 
-    // Verificar relación inversa
-    expect(
-        $docente1001->grupos()->whereKey($grupo->id)->exists()
-    )->toBeTrue();
-
-    // Poscondición
     $this->assertDatabaseCount('docente_grupo', 2);
 });
